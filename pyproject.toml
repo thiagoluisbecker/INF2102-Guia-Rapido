@@ -1,0 +1,17 @@
+[project]
+name = "guia-rapido-rag"
+version = "0.1.0"
+description = "RAG multimodal sobre Guias Rápidos de saúde da SMS-Rio, com respostas citáveis por página"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "google-genai",     
+    "python-dotenv",     
+    "pypdf",             
+    "langchain-chroma", 
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",  
+]
