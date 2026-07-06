@@ -1,6 +1,6 @@
 # Relatório Final do Projeto
 
-# Guia Rápido RAG — Assistente de Consulta a Guias Rápidos de Saúde
+# Guia Rápido RAG: Assistente de Consulta a Guias Rápidos de Saúde
 
 ## Breve Descrição
 
@@ -15,7 +15,7 @@ recomendadas em guias de referência (protocolos) em PDF.
 **Funções específicas relevantes:**
 
 - Indexação de guias em PDF, página a página, com embeddings multimodais
-  (o vetor representa a página inteira — texto, tabelas e fluxogramas);
+  (o vetor representa a página inteira: texto, tabelas e fluxogramas);
 - Busca semântica vetorial: dada uma pergunta, recupera as `k` páginas mais
   relevantes, com filtro opcional por guia;
 - Geração de resposta fundamentada: o modelo lê as páginas originais do PDF e
@@ -42,8 +42,8 @@ separado e não faz parte deste pacote.
   Toda resposta cita a página de origem justamente para que o profissional
   confira o guia oficial antes de qualquer conduta.
 - As respostas são geradas por um modelo de linguagem (Gemini 2.5 Flash) e,
-  como todo LLM, ele está sujeito a **alucinações** — afirmações que parecem
-  plausíveis mas não constam do material. O projeto adota mitigações em várias
+  como todo LLM, ele está sujeito a **alucinações** (afirmações que parecem
+  plausíveis mas não constam do material). O projeto adota mitigações em várias
   camadas: (i) a própria arquitetura RAG restringe o modelo às páginas
   recuperadas dos guias, em vez de deixá-lo responder de memória; (ii) as
   páginas são enviadas ao modelo como o PDF original, e não como texto
@@ -56,7 +56,7 @@ separado e não faz parte deste pacote.
   citações), mas **nenhuma combinação de técnicas elimina o risco**: o modelo
   ainda pode omitir uma condição relevante, misturar condutas de páginas
   diferentes ou citar uma página que não sustenta a afirmação. Por isso, a
-  resposta deve ser tratada como um apontador para o guia — a conduta só deve
+  resposta deve ser tratada como um apontador para o guia; a conduta só deve
   ser adotada após conferência na página citada do documento oficial.
 
 
@@ -84,32 +84,39 @@ ter certeza de que não está esquecendo nenhuma providência obrigatória.
 Pergunta ao assistente quais procedimentos realizar e recebe uma lista
 objetiva: solicitar ultrassonografia mensal a partir do primeiro trimestre,
 registrar o exantema no cartão de pré-natal, notificar o caso em até 24 horas
-no SINAN-Rio e cadastrar o exame no GAL com a idade gestacional — tudo com a
+no SINAN-Rio e cadastrar o exame no GAL com a idade gestacional, tudo com a
 citação `(pág. 108)` do Guia Rápido de Pré-Natal. Carlos confere a página
 citada, executa as notificações no prazo e anota no prontuário que seguiu o
 protocolo municipal vigente.
 
 ### Cenário Negativo 1 (cenário que expõe uma limitação conhecida e esperada do programa)
 
-Marina atende um homem de 22 anos, com diabetes tipo 1, apresentando quadro
-sintomático de dengue. Ela pergunta ao assistente como proceder. O sistema
-recupera as páginas mais próximas do tema — todas do Guia Rápido de Diabetes —
-e responde sobre o manejo da descompensação diabética em quadros infecciosos
-agudos, encerrando com a observação de que *as páginas fornecidas não abordam
-especificamente o manejo da dengue*. Isso acontece porque o Guia Rápido de
-Dengue não está entre os documentos indexados nesta prova de conceito: o
-assistente só responde com base nos guias presentes na coleção e sinaliza
-explicitamente quando a informação não está no material. Marina entende o
-aviso, usa a parte útil da resposta (manejo do diabetes) e consulta o
-protocolo de dengue por outro meio.
+Marina atende um paciente com diabetes tipo 2 em uso de metformina e pergunta
+ao assistente qual a conduta indicada diante de uma taxa de filtração
+glomerular reduzida. O assistente recupera páginas do Guia Rápido de Diabetes
+(o guia correto, efetivamente indexado e disponível na coleção) e responde
+com uma recomendação de ajuste de dose que soa plausível, citando
+`(pág. N)`. Ao abrir a página citada para conferir, Marina percebe que a
+afirmação **não consta ali**: o valor de corte de TFG mencionado pelo modelo
+não aparece na página indicada nem em nenhuma outra do documento. É uma
+alucinação do modelo de linguagem: ele preencheu uma lacuna com uma
+informação plausível, mas inexistente no material, mesmo estando restrito às
+páginas recuperadas (ver Ressalvas). A falha aqui é do processo de geração da
+resposta (do RAG), não de cobertura documental: diferentemente de uma
+pergunta sobre um guia que simplesmente não está indexado (caso em que o
+sistema declara explicitamente a ausência de informação), aqui o tema está
+coberto e a página certa foi recuperada, mas o modelo erra ao gerar a
+resposta. Marina só percebe o problema porque confere a citação obrigatória
+na página oficial; sem essa conferência, teria seguido uma orientação sem
+respaldo no guia.
 
 ### Cenário Negativo 2
 
 Ana é enfermeira e pergunta ao assistente qual o esquema de tratamento para
 bacteriúria assintomática em uma gestante no segundo trimestre. O assistente
 recupera as páginas mais próximas do tema no Guia Rápido de Pré-Natal e
-responde com um esquema terapêutico aparentemente completo — antibiótico,
-dose e duração — citando `(pág. N)`. Ao abrir a página citada para conferir,
+responde com um esquema terapêutico aparentemente completo (antibiótico,
+dose e duração), citando `(pág. N)`. Ao abrir a página citada para conferir,
 Ana percebe que a resposta **misturou informações**: parte da posologia veio
 de uma tabela de outra condição presente na mesma página, e a duração indicada
 não corresponde à faixa recomendada pelo guia para o caso dela. A falha é uma
@@ -120,13 +127,13 @@ página incorreta (ver Ressalvas). É exatamente para esse caso que a citação
 obrigatória existe: como toda afirmação aponta para a página de origem, a
 divergência é detectável na conferência. Ana descarta a parte incorreta,
 segue o esquema descrito na página oficial do guia e trata a resposta do
-assistente como o que ele é — um localizador de condutas, não a conduta em si.
+assistente como o que ele é: um localizador de condutas, não a conduta em si.
 
 ## Documentação Técnica do Projeto
 
 ### Especificação de requisitos funcionais e não-funcionais
 
-Requisitos levantados na concepção do projeto, com prioridade e situação nesta
+Requisitos levantados na concepção do projeto para a disciplina `INF2921`, com prioridade e situação 
 prova de conceito:
 
 | ID | Requisito funcional | Prioridade | Situação |
@@ -156,7 +163,7 @@ prova de conceito:
 
 O sistema tem duas fases:
 
-**Fase 1 — Ingestão (uma vez por guia):**
+**Fase 1: Ingestão (uma vez por guia):**
 
 ```
 PDF do guia
@@ -167,7 +174,7 @@ PDF do guia
     id determinístico "arquivo::page_N" e metadados {source, path, page}
 ```
 
-**Fase 2 — Consulta e resposta (a cada pergunta):**
+**Fase 2: Consulta e resposta (a cada pergunta):**
 
 ```
 Pergunta em linguagem natural
@@ -184,13 +191,10 @@ Pergunta em linguagem natural
 Decisões estruturantes:
 
 - **1 página = 1 vetor, sem chunking textual.** Os guias são organizados em
-  páginas autocontidas (fluxogramas, tabelas de conduta); manter a página como
-  unidade preserva esse contexto e permite citação exata.
+  páginas autocontidas (fluxogramas, tabelas de conduta)
 - **Embedding do PDF binário, não do texto extraído.** Captura layout, tabelas
   e imagens; o texto extraído pelo pypdf ainda é guardado como `page_content`
   para eventual reranking textual futuro.
-- **Conteúdo servido do disco, não do índice.** Elimina dessincronização entre
-  vetor e documento e garante que o modelo veja a página oficial.
 
 ### Sobre o código
 
@@ -229,12 +233,12 @@ O manual cobre as tarefas dos dois perfis: **quem opera o sistema**
 Para preparar o ambiente, faça:
 
 - Passo 1: instale o [uv](https://docs.astral.sh/uv/) e garanta Python ≥ 3.10.
-- Passo 2: na pasta `pfp/`, rode `uv sync` para criar a `.venv` e instalar as
+- Passo 2: rode `uv sync` para criar a `.venv` e instalar as
   dependências.
 - Passo 3: copie `.env.example` para `.env` e preencha `GOOGLE_API_KEY` com
   uma chave do Google AI Studio (<https://aistudio.google.com/apikey>).
 - Passo 4: abra `main.ipynb` no editor (VS Code, Jupyter Lab) selecionando o
-  kernel da `.venv` criada.
+  kernel da `.venv` criada e rode o notebook.
 
 Exceções ou potenciais problemas:
 
@@ -242,7 +246,7 @@ Exceções ou potenciais problemas:
   `pyproject.toml` com `pip install` em um ambiente virtual comum.
 - Se aparecer erro de autenticação ao rodar o notebook (`API key not valid` ou
   similar): é porque o `.env` não foi criado, está fora da pasta `pfp/` ou a
-  chave é inválida — confira o passo 3 e reinicie o kernel.
+  chave é inválida; confira o passo 3 e reinicie o kernel.
 
 ### Guia de Instruções: INDEXAR OS GUIAS (primeira execução)
 
@@ -265,10 +269,9 @@ Para adicionar um guia novo, faça:
 
 Exceções ou potenciais problemas:
 
-- Se a ingestão for interrompida no meio: rode novamente; o upsert é
-  idempotente e apenas regrava as páginas.
+- Se a ingestão for interrompida no meio: rode novamente
 - Se ocorrer erro de cota/limite da API (`429`): é porque a chave gratuita tem
-  limite de chamadas por minuto — aguarde e reexecute, ou use uma chave com
+  limite de chamadas por minuto; aguarde e reexecute, ou use uma chave com
   cota maior.
 - Se a célula de ingestão indicar "Coleção já populada": é o comportamento
   esperado nas execuções seguintes; para reindexar do zero, apague a pasta
@@ -283,7 +286,7 @@ Para obter uma resposta com citações, faça:
   from agent import answer_question
   resposta = answer_question(vector_store, client, "sua pergunta aqui", k=5)
   ```
-- Passo 2: exiba `resposta.as_markdown()` — a resposta vem com citações
+- Passo 2: exiba `resposta.as_markdown()`: a resposta vem com citações
   `(pág. N)` no corpo e a lista de fontes ao final, com links que abrem o PDF
   na página exata.
 - Passo 3: **confira a página citada no guia oficial** antes de adotar
@@ -305,12 +308,12 @@ Exceções ou potenciais problemas:
 
 - Se a resposta disser que a informação não está nas páginas fornecidas: é
   porque o assunto não consta dos guias indexados (ver Cenário Negativo 1) ou
-  porque as páginas recuperadas não foram as certas — reformule a pergunta com
+  porque as páginas recuperadas não foram as certas; reformule a pergunta com
   termos do domínio (p.ex. "cetoacidose diabética" em vez de "açúcar alto") ou
   aumente `k`.
 - Se a resposta parecer incompleta ou genérica: verifique os scores das
-  fontes; valores altos (> ~0,6, distância cosseno) indicam recuperação fraca
-  — reformule a pergunta ou filtre por `source`.
+  fontes; valores altos (> ~0,6, distância cosseno) indicam recuperação fraca;
+  reformule a pergunta ou filtre por `source`.
 - Se o link da fonte não abrir na página correta: é porque o visualizador de
   PDF não suporta a âncora `#page=N` — abra o PDF manualmente na página
   indicada na citação.
