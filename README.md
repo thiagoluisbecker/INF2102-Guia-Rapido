@@ -35,18 +35,16 @@ uv sync
 # 2. Configure a credencial
 cp .env.example .env   # e edite, colocando sua GOOGLE_API_KEY
 
-# 3. Abra o notebook (no VS Code, Jupyter etc., usando o kernel da .venv)
-uv run jupyter lab main.ipynb   # ou abra pelo editor
+uv run jupyter lab main.ipynb  
 ```
 
 Execute as células do `main.ipynb` em ordem:
 
 1. **Split e embeddings** — define as funções de corte do PDF e a classe
    `GeminiEmbeddings`.
-2. **Vector store** — abre/cria a coleção `guias_saude` no Chroma local.
-3. **Ingestão** — na primeira execução, vetoriza os dois guias
-   (~276 páginas, uma chamada de API por página; leva alguns minutos e é a
-   etapa mais custosa). Nas execuções seguintes a célula detecta a coleção
+2. **Vector store** — abre/cria a coleção `guias_saude` em um Chroma local.
+3. **Ingestão** — na primeira execução, vetoriza os dois guias em `/guias`
+   (~276 páginas, uma chamada de API por página leva alguns minutos). Nas execuções seguintes a célula detecta a coleção
    populada e pula a ingestão.
 4. **Consultas** — exemplos de busca semântica pura (`query`) e de resposta
    gerada com citações (`answer_question`).
@@ -59,7 +57,7 @@ from agent import answer_question
 resposta = answer_question(
     vector_store, client,
     "Quais são os sintomas de hipoglicemia?",
-    k=5,                # nº de páginas recuperadas
+    k=5,                # nº de páginas recuperadas 
     # source="Livro_GuiaRapido-DiabetesMellitus_PDFDigital_20231113.pdf",  # filtro opcional por guia
 )
 print(resposta.as_markdown())
@@ -69,27 +67,18 @@ print(resposta.as_markdown())
 
 | Dependência | Para quê | Por que ela (e não outra) |
 |---|---|---|
-| `google-genai` | Embeddings (`gemini-embedding-2-preview`) e geração (`gemini-2.5-flash`) | Único provedor de embeddings que aceita **PDF nativo** (`Part.from_bytes`), preservando tabelas, fluxogramas e layout sem OCR; suporta `task_type` assimétrico (query vs. documento), o que melhora o recall; bom desempenho em português |
-| `pypdf` | Corte do PDF em páginas individuais e extração de texto | Puro Python, sem dependências nativas e sem restrição de licença (PyMuPDF é AGPL; pdfplumber seria excessivo para split) |
-| `langchain-chroma` | Vector store persistente local (traz `chromadb` e `langchain-core`) | Chroma roda embutido, sem servidor nem custo (vs. Pinecone/Weaviate), e suporta filtro por metadado (vs. FAISS); a abstração `VectorStore`/`Embeddings` do LangChain permite trocar o backend sem reescrever o pipeline |
+| `google-genai` | Embeddings (`gemini-embedding-2-preview`) e geração (`gemini-2.5-flash`) | Único provedor de embeddings que aceita **PDF nativo** (`Part.from_bytes`), preservando tabelas, fluxogramas e layout sem OCR; |
+| `pypdf` | Corte do PDF em páginas individuais e extração de texto | sem dependências nativas e sem restrição de licença |
+| `langchain-chroma` | Vector store persistente local  | Chroma roda embutido, sem servidor nem custo , e suporta filtro por metadado (vs. FAISS) |
 | `python-dotenv` | Carrega `GOOGLE_API_KEY` do `.env` | Mantém a credencial fora do código e do versionamento |
 | `ipykernel` (dev) | Kernel Jupyter | Necessário apenas para executar o `main.ipynb` |
 
-Escolhas de projeto relevantes:
-
-- **1 página = 1 vetor**, sem chunking textual: preserva fluxogramas e tabelas
-  como unidade e permite citar/linkar direto `arquivo.pdf#page=N`.
-- **O índice só localiza; o conteúdo vem do disco**: na resposta, o agente relê
-  a página original do PDF e a envia ao modelo, garantindo fidelidade máxima
-  (imagens e tabelas) e evitando dessincronização entre índice e documento.
-- **Upsert com id determinístico** (`arquivo::page_N`): reexecutar a ingestão
-  não duplica vetores.
 
 ## Ressalvas
 
 - Ferramenta de **apoio à consulta**, não de decisão clínica: a resposta deve
-  sempre ser conferida na página citada do guia oficial.
+  sempre ser conferida no guia oficial.
 - Cobre apenas os dois guias incluídos; perguntas fora deles recebem indicação
-  explícita de que a informação não está no material.
+  explícita de que a informação não está no material .
 - Requer conexão com a internet e chave de API válida (dados das perguntas
   trafegam para a API do Google).
